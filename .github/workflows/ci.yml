@@ -1,0 +1,27 @@
+name: security-ci
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[dev]'
+      - run: pytest -q
+      - run: ruff check .
+      - run: bandit -c pyproject.toml -r app
+      - run: pip-audit
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t secure-llm-application:test .
+      - run: test "$(docker inspect --format '{{.Config.User}}' secure-llm-application:test)" = app
